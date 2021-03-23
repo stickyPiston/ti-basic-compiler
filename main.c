@@ -4,10 +4,20 @@
 #include <string.h>
 
 #define writeOut(value) do { \
-    unsigned char v = value; \
-    fwrite(&v, 1, 1, outFile); \
+    if (programLength == 0) { \
+      program = malloc(1); \
+      program[programLength++] = value; \
+    } else { \
+      program = realloc(program, ++programLength); \
+      program[programLength - 1] = value; \
+    } \
+    dataSum += value; \
     index++; \
   } while (0)
+
+unsigned char *program = NULL;
+uint16_t programLength = 0;
+long long dataSum = 0;
 
 int main(int argc, char **argv) {
   if (argc != 2) {
@@ -28,7 +38,8 @@ int main(int argc, char **argv) {
   char *content = malloc(filesize);
   fread(content, filesize, 1, fp);
 
-  FILE *outFile = fopen("out.8xp", "w");
+  fclose(fp);
+  fp = NULL;
 
   int index = 0;
   while (index < filesize - 1) {
@@ -53,10 +64,9 @@ int main(int argc, char **argv) {
       if (strncmp(content + index, "xor", 3) == 0) { writeOut(0xd3); continue; }
       if (strncmp(content + index, "and", 3) == 0) { writeOut(0x04); continue; }
 
-      fwrite(&firstChar, 1, 1, outFile); index++; continue;
+      writeOut(firstChar); continue;
     } else if (isdigit(firstChar)) { // Number
-      fwrite(&firstChar, 1, 1, outFile);
-      index++;
+      writeOut(firstChar);
     } else if (firstChar == ':' || firstChar == ';') { // delimiter
       writeOut(0x3e);
     } else if (firstChar == ' ') { // space
@@ -99,6 +109,35 @@ int main(int argc, char **argv) {
     }
 
   }
+
+  FILE *outFile = fopen("out.8xp", "w");
+  if (outFile == NULL) {
+    fprintf(stderr, "Couldn't open out.8xp");
+    abort();
+  }
+
+  unsigned char header[] = { 0x2a, 0x2a, 0x54, 0x49, 0x38, 0x33, 0x46, 0x2a, 0x1a, 0x0a, 0x0a };
+  fwrite(header, sizeof(header), 1, outFile);
+
+  char *comment = calloc(42, 1);
+  strcpy(comment, "Made using stickyPiston/ti-basic-compiler");
+  fwrite(comment, 42, 1, outFile);
+
+  programLength += 2;
+  unsigned char varEntry[] = { 0x0d, 0x00, programLength, programLength >> 8,  0x05, 0x50, 0x52, 0x4f, 0x47, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, programLength, programLength >> 8, 0x04, 0x00 };
+
+  for (int i = 0; i < sizeof(varEntry); i++) dataSum += varEntry[i];
+
+  uint16_t dataLength = sizeof(varEntry) + programLength;
+
+  fwrite(&dataLength, 2, 1, outFile);
+  fwrite(varEntry, sizeof(varEntry), 1, outFile);
+  fwrite(program, programLength - 2, 1, outFile);
+  
+  uint16_t checksum = dataSum & 0xffff;
+  fwrite(&checksum, 2, 1, outFile);
+
+  fclose(outFile);
 
   return 0;
 }
