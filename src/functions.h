@@ -53,7 +53,7 @@ TIFunction functionTable[] = {
   {0x29, " "},
 
   {0x3f, "\n"},
-  {0x3f, "\r"},
+  {0x3f, "\r\n"},
   {0x70, "+"},
   {0x71, "-"},
   {0x2a, "\""},
