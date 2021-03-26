@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
     abort();
   } 
 
+  // Read all bytes from the source file
   fseek(fp, 0, SEEK_END);
   int filesize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
@@ -66,6 +67,7 @@ int main(int argc, char **argv) {
     abort();
   }
 
+  // Append header to file
   unsigned char header[] = { 0x2a, 0x2a, 0x54, 0x49, 0x38, 0x33, 0x46, 0x2a, 0x1a, 0x0a, 0x0a };
   fwrite(header, 11, 1, outFile);
 
@@ -73,6 +75,7 @@ int main(int argc, char **argv) {
   strcpy(comment, "Made using stickyPiston/ti-basic-compiler");
   fwrite(comment, 42, 1, outFile);
 
+  // Append program and program information to file
   programLength += 2;
   unsigned char varEntry[] = { 0x0d, 0x00, programLength, programLength >> 8,  0x05, 0x50, 0x52, 0x4f, 0x47, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, programLength, programLength >> 8, 0x04, 0x00 };
 
@@ -84,6 +87,7 @@ int main(int argc, char **argv) {
   fwrite(varEntry, sizeof(varEntry), 1, outFile);
   fwrite(program, programLength - 2, 1, outFile);
   
+  // Append checksum to file
   uint16_t checksum = dataSum & 0xffff;
   fwrite(&checksum, 2, 1, outFile);
 
