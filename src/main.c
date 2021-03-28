@@ -7,15 +7,6 @@
 #include "functions.h"
 
 #define writeOut(value) do { \
-    if (programLength == 0) { \
-      program = malloc(1); \
-      program[programLength++] = value; \
-    } else { \
-      program = realloc(program, ++programLength); \
-      program[programLength - 1] = value; \
-    } \
-    dataSum += value; \
-    index++; \
   } while (0)
 
 unsigned char *program = NULL;
@@ -50,9 +41,30 @@ int main(int argc, char **argv) {
     int isParsed = 0;
     for (int i = 0; functionTable[i].name != NULL; i++) {
       if (strncmp(functionTable[i].name, content + index, strlen(functionTable[i].name)) == 0) {
+        if (programLength == 0) {
+          if (functionTable[i].type == OPCODE_1BYTE) {
+            program = malloc(1);
+            program[programLength++] = (unsigned char)(functionTable[i].opcode & 0xff);
+          } else {
+            program = malloc(2);
+            program[programLength++] = (unsigned char)(functionTable[i].opcode >> 8 & 0xff);
+            program[programLength++] = (unsigned char)(functionTable[i].opcode & 0xff);
+          }
+        } else {
+          if (functionTable[i].type == OPCODE_1BYTE) {
+            program = realloc(program, ++programLength);
+            program[programLength - 1] = (unsigned char)(functionTable[i].opcode & 0xff);
+          } else {
+            programLength += 2;
+            program = realloc(program, programLength);
+            program[programLength - 2] = (unsigned char)(functionTable[i].opcode >> 8 & 0xff);
+            program[programLength - 1] = (unsigned char)(functionTable[i].opcode & 0xff);
+          }
+        }
+        dataSum += functionTable[i].opcode;
+        index += strlen(functionTable[i].name);
         isParsed = 1;
-        writeOut(functionTable[i].opCode);
-        index += strlen(functionTable[i].name) - 1;
+        break;
       }
     }
     if (!isParsed) {
