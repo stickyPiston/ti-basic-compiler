@@ -1,7 +1,7 @@
 all: tic
 
-tic: src/main.c
-	cc src/main.c -o tic -Wall -Werror -g
+tic: 
+	cc src/main.c src/tic.c -o tic -Wall -Werror -g -Iinclude
 
 .PHONY: clean
 clean:

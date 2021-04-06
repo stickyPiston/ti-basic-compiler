@@ -1,109 +1,45 @@
-#include <ctype.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
+#include <stdbool.h>
 
-#include "functions.h"
+#include <tic/tic.h>
+#include <tic/cli.h>
 
-#define writeOut(value) do { \
-  } while (0)
+char *inputFile        = NULL;
+char *programName      = NULL;
+char *outputFile       = NULL;
+bool ignoreWhitespace  = false;
+bool disassemble       = false;
 
-unsigned char *program = NULL;
-uint16_t programLength = 0;
-long long dataSum = 0;
-
-int main(int argc, char **argv) {
-  if (argc != 2) {
-    fprintf(stderr, "The ti-basic compiler requires 1 argument");
-    abort();
-  }
-
-  FILE *fp = fopen(argv[1], "r");
-  if (fp == NULL) {
-    fprintf(stderr, "Could not open %s\n", argv[1]);
-    abort();
-  } 
-
-  // Read all bytes from the source file
-  fseek(fp, 0, SEEK_END);
-  int filesize = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-
-  char *content = malloc(filesize);
-  fread(content, filesize, 1, fp);
-
-  fclose(fp);
-  fp = NULL;
-
-  int index = 0;
-  while (index < filesize - 1) {
-    int isParsed = 0;
-    for (int i = 0; functionTable[i].name != NULL; i++) {
-      if (strncmp(functionTable[i].name, content + index, strlen(functionTable[i].name)) == 0) {
-        if (programLength == 0) {
-          if (functionTable[i].type == OPCODE_1BYTE) {
-            program = malloc(1);
-            program[programLength++] = (unsigned char)(functionTable[i].opcode & 0xff);
-          } else {
-            program = malloc(2);
-            program[programLength++] = (unsigned char)(functionTable[i].opcode >> 8 & 0xff);
-            program[programLength++] = (unsigned char)(functionTable[i].opcode & 0xff);
-          }
-        } else {
-          if (functionTable[i].type == OPCODE_1BYTE) {
-            program = realloc(program, ++programLength);
-            program[programLength - 1] = (unsigned char)(functionTable[i].opcode & 0xff);
-          } else {
-            programLength += 2;
-            program = realloc(program, programLength);
-            program[programLength - 2] = (unsigned char)(functionTable[i].opcode >> 8 & 0xff);
-            program[programLength - 1] = (unsigned char)(functionTable[i].opcode & 0xff);
-          }
-        }
-        dataSum += functionTable[i].opcode;
-        index += strlen(functionTable[i].name);
-        isParsed = 1;
-        break;
-      }
-    }
-    if (!isParsed) {
-      fprintf(stderr, "Unrecognised token %c", *(content + index));
-      abort();
+int main(int argc, char *argv[]) {
+  for (int i = 0; i < argc; i++) {
+    if (strcmp(argv[i], "-o") == 0) {
+      outputFile = argv[++i];
+    } else if (strcmp(argv[i], "-i") == 0) {
+      ignoreWhitespace = true;
+    } else if (strcmp(argv[i], "-d") == 0) {
+      disassemble = true;
+    } else if (strcmp(argv[i], "-n") == 0) {
+      programName = argv[++i];
+    } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+      openHelp(argv[0]);
+      return 0;
+    } else {
+      inputFile = argv[i];
     }
   }
 
-  FILE *outFile = fopen("out.8xp", "w");
-  if (outFile == NULL) {
-    fprintf(stderr, "Couldn't open out.8xp");
-    abort();
-  }
+  runTic();
+}
 
-  // Append header to file
-  unsigned char header[] = { 0x2a, 0x2a, 0x54, 0x49, 0x38, 0x33, 0x46, 0x2a, 0x1a, 0x0a, 0x0a };
-  fwrite(header, 11, 1, outFile);
-
-  char *comment = calloc(42, 1);
-  strcpy(comment, "Made using stickyPiston/ti-basic-compiler");
-  fwrite(comment, 42, 1, outFile);
-
-  // Append program and program information to file
-  programLength += 2;
-  unsigned char varEntry[] = { 0x0d, 0x00, programLength, programLength >> 8,  0x05, 0x50, 0x52, 0x4f, 0x47, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, programLength, programLength >> 8, 0x04, 0x00 };
-
-  for (int i = 0; i < sizeof(varEntry); i++) dataSum += varEntry[i];
-
-  uint16_t dataLength = sizeof(varEntry) + programLength;
-
-  fwrite(&dataLength, 2, 1, outFile);
-  fwrite(varEntry, sizeof(varEntry), 1, outFile);
-  fwrite(program, programLength - 2, 1, outFile);
-  
-  // Append checksum to file
-  uint16_t checksum = dataSum & 0xffff;
-  fwrite(&checksum, 2, 1, outFile);
-
-  fclose(outFile);
-
-  return 0;
+void openHelp(char *command) {
+  puts("tic: TI-BASIC compiler");
+  puts("Command line interface usage:");
+  printf("%s <input file>\n", command);
+  puts("\nAvailable flags:");
+  puts(" -o: Specify the output file path");
+  puts(" -i: Ignore whitespace characters, tabs and whitespaces will not be added to the final binary");
+  puts(" -d: Enable disassembly mode");
+  puts(" -n: Specify the name of the program when sent to the calculator");
+  puts(" -h: Show the help page");
 }

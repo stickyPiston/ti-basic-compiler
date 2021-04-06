@@ -1,5 +1,6 @@
 out.8xp
 *.dSYM
+*.swp
 tic
 .DS_Store
 ._*
