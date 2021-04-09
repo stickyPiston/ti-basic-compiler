@@ -4,7 +4,8 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "functions.h"
+#include "tables/functions.h"
+#include "tables/strings.h"
 #include <tic/tic.h>
 
 static unsigned char *program = NULL;
@@ -12,6 +13,7 @@ static uint16_t programLength = 0;
 static long long dataSum = 0;
 
 extern char *inputFile;
+extern Language lang;
 
 void runTic() {
   FILE *fp = fopen(inputFile, "r");
@@ -35,10 +37,10 @@ void runTic() {
   TokenType previousTokenType = TOKEN_NONE;
   while (index < filesize - 1) {
     int isParsed = 0;
-    for (int i = 0; functionTable[i].name != NULL; i++) {
-      if (strncmp(functionTable[i].name, content + index, strlen(functionTable[i].name)) == 0) {
+    for (int i = 0; stringTable[i][lang] != NULL; i++) {
+      if (strncmp(stringTable[i][lang], content + index, strlen(stringTable[i][lang])) == 0) {
         uint16_t opcode = functionTable[i].opcode;
-        if (strcmp("-", functionTable[i].name) == 0 && (previousTokenType == TOKEN_OPERATOR || previousTokenType == TOKEN_OTHER)) {
+        if (strcmp("-", stringTable[i][lang]) == 0 && (previousTokenType == TOKEN_OPERATOR || previousTokenType == TOKEN_OTHER)) {
           opcode = 0xb0;
         }
 
@@ -63,7 +65,7 @@ void runTic() {
           }
         }
         dataSum += opcode;
-        index += strlen(functionTable[i].name);
+        index += strlen(stringTable[i][lang]);
         previousTokenType = functionTable[i].tokenType;
         isParsed = 1;
         break;

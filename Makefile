@@ -1,8 +1,18 @@
-all: tic
+CC := cc 
+BIN_DIR := ./bin
+OBJ_DIR := $(BIN_DIR)/obj
+TARGET := $(BIN_DIR)/tic
 
-tic: 
-	cc src/main.c src/tic.c -o tic -Wall -Werror -g -Iinclude
+SRC := $(wildcard src/*.c)
 
-.PHONY: clean
-clean:
-	rm tic
+OBJECTS = $(SRC:%.c=$(OBJ_DIR)/%.o)
+
+all: $(TARGET)
+
+$(OBJ_DIR)/%.o: %.c
+	@mkdir -p $(@D)
+	$(CC) $< -o $@ -Iinclude -c -g
+
+$(TARGET): $(OBJECTS)
+	@mkdir -p $(@D)
+	$(CC) -o $(TARGET) $^

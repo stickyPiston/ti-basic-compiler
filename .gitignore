@@ -1,7 +1,9 @@
+# Output files
+bin/
 out.8xp
+
+# Annoying files
 *.dSYM
 *.swp
-tic
 .DS_Store
 ._*
-reference.8xp
