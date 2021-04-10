@@ -29,6 +29,7 @@ typedef enum {
   LANG_SE = 2
 } Language;
 
-void runTic();
+void compile();
+void disassemble();
 
 #endif

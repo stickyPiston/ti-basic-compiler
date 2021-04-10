@@ -6,8 +6,9 @@ ti-basic-compiler is a compiler for ti-basic. It's designed to be better than ti
 
 **For Unix and mingw/cygwin users:**
 1. Clone this repo: `git clone https://github.com/stickyPiston/ti-basic-compiler.git`
-2. Run `make`, it will output a binary called `tic`
-3. Compile the example ti-basic file: `./tic example.ti`
+2. Run `make`, it will create a folder with a binary called `tic`
+3. Compile the example ti-basic file: `./bin/tic example.ti`
+4. Open tic's help manual by running `./bin/tic -h`
 
 **For Windows (msvc) users:**
-good luck
+good luck (future support is planned, but not prioritised)

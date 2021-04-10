@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <inttypes.h>
 
 #include "tables/functions.h"
@@ -12,10 +13,14 @@ static unsigned char *program = NULL;
 static uint16_t programLength = 0;
 static long long dataSum = 0;
 
+// CLI arguments
 extern char *inputFile;
+extern char *outputFile;
+extern char programName[9];
+extern bool ignoreWhitespace;
 extern Language lang;
 
-void runTic() {
+int readFile(char **out) {
   FILE *fp = fopen(inputFile, "r");
   if (fp == NULL) {
     fprintf(stderr, "Could not open %s\n", inputFile);
@@ -27,12 +32,17 @@ void runTic() {
   int filesize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
 
-  char *content = malloc(filesize);
-  fread(content, filesize, 1, fp);
+  *out = malloc(filesize);
+  fread(*out, filesize, 1, fp);
 
   fclose(fp);
-  fp = NULL;
+  
+  return filesize;
+}
 
+void compile() {
+  char *content = NULL;
+  int filesize = readFile(&content);
   int index = 0; 
   TokenType previousTokenType = TOKEN_NONE;
   while (index < filesize - 1) {
@@ -42,6 +52,12 @@ void runTic() {
         uint16_t opcode = functionTable[i].opcode;
         if (strcmp("-", stringTable[i][lang]) == 0 && (previousTokenType == TOKEN_OPERATOR || previousTokenType == TOKEN_OTHER)) {
           opcode = 0xb0;
+        }
+
+        if (strcmp(" ", stringTable[i][lang]) == 0 && ignoreWhitespace) {
+          isParsed = 1;
+          index++;
+          break;
         }
 
         if (programLength == 0) {
@@ -77,9 +93,9 @@ void runTic() {
     }
   }
 
-  FILE *outFile = fopen("out.8xp", "w");
+  FILE *outFile = fopen(outputFile, "w");
   if (outFile == NULL) {
-    fprintf(stderr, "Couldn't open out.8xp");
+    fprintf(stderr, "Couldn't open %s", outputFile);
     abort();
   }
 
@@ -93,7 +109,7 @@ void runTic() {
 
   // Append program and program information to file
   programLength += 2;
-  unsigned char varEntry[] = { 0x0d, 0x00, programLength, programLength >> 8,  0x05, 0x50, 0x52, 0x4f, 0x47, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, programLength, programLength >> 8, 0x04, 0x00 };
+  unsigned char varEntry[] = { 0x0d, 0x00, programLength, programLength >> 8,  0x05, programName[0], programName[1], programName[2], programName[3], programName[4], programName[5], programName[6], programName[7], 0x00, 0x00, programLength, programLength >> 8, 0x04, 0x00 };
 
   for (int i = 0; i < sizeof(varEntry); i++) dataSum += varEntry[i];
 
@@ -108,4 +124,28 @@ void runTic() {
   fwrite(&checksum, 2, 1, outFile);
 
   fclose(outFile);
+}
+
+void disassemble() {
+  unsigned char *bytes = NULL;
+  int filesize = readFile((char **)&bytes);
+
+  for (int i = 74; i < filesize - 2; i++) {
+    for (int j = 0; stringTable[j][lang] != NULL; j++) {
+      if (bytes[i] == 0x5c || bytes[i] == 0x5d || bytes[i] == 0x5e || bytes[i] == 0x60 || bytes[i] == 0x61 || bytes[i] == 0xaa || bytes[i] == 0xef || bytes[i] == 0x62 || bytes[i] == 0x63 || bytes[i] == 0x7e || bytes[i] == 0xbb) {
+        uint16_t twobytevalue = bytes[i] << 8;
+        twobytevalue |= bytes[++i];
+        if (functionTable[j].opcode == twobytevalue) {
+          printf("%s", stringTable[j][lang]);
+        }
+      } else {
+        if (functionTable[j].opcode == bytes[i]) {
+          if (strcmp(stringTable[j][lang], "\n") != 0)
+            printf("%s", stringTable[j][lang]);
+        }
+      }
+    }
+  }
+
+  puts("");
 }

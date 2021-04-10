@@ -16,3 +16,7 @@ $(OBJ_DIR)/%.o: %.c
 $(TARGET): $(OBJECTS)
 	@mkdir -p $(@D)
 	$(CC) -o $(TARGET) $^
+
+.PHONY: clean
+clean:
+	rm -rf $(BIN_DIR)

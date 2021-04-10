@@ -1,1 +1,3 @@
-RommelOpruimen
+For(A, 0, 10)
+  Disp A
+End
