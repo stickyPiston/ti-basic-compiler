@@ -20,3 +20,7 @@ $(TARGET): $(OBJECTS)
 .PHONY: clean
 clean:
 	rm -rf $(BIN_DIR)
+
+install: $(TARGET)
+	cp $(TARGET) $(BIN_DIR)/ti-compiler
+	mkdir -p $(DESTDIR)$(BIN_DIR)
